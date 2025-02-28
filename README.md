@@ -36,7 +36,9 @@ The directory structure for the moos-ivp-extend is described below:
 #Before Building
 
 Run:
-sudo apt install libboost-all-dev
+```bash
+   sudo apt install libboost-all-dev
+```
 
 ## Linux and Mac Users
 
