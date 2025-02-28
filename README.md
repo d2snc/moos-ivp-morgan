@@ -33,6 +33,11 @@ The directory structure for the moos-ivp-extend is described below:
 
 # Build Instructions
 
+#Before Building
+
+Run:
+sudo apt install libboost-all-dev
+
 ## Linux and Mac Users
 
 To build on Linux and Apple platforms, execute the build script within this
