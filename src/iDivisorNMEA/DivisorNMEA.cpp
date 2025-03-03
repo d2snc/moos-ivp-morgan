@@ -306,8 +306,8 @@ bool DivisorNMEA::Iterate()
   //TODO deixar parametrizavel pra localização
 
   // Morgan City
-  double lat_origin = 29.71970895316288; //ALTERAR AQUI SE MUDAR A CARTA NÁUTICA !!!
-  double lon_origin = -91.14705165281887;
+  double lat_origin = 29.719708; //ALTERAR AQUI SE MUDAR A CARTA NÁUTICA !!!
+  double lon_origin = -91.147051;
 
   // Salvador
   //double lat_origin = -12.97933112028696;

@@ -116,12 +116,19 @@ ProcessConfig = uSimMarineV22
 
 ProcessConfig = pHelmIvP
 {
-  AppTick    = 30
-  CommsTick  = 5
+  AppTick    = 4
+  CommsTick  = 4
 
-  behaviors  = alpha.bhv
-  domain     = course:0:359:360
-  domain     = speed:0:30:310
+  Behaviors  = alpha.bhv
+  Verbose    = quiet
+  Domain     = course:0:359:360
+  Domain     = speed:0:15:30
+
+  IVP_BEHAVIOR_DIR = /home/d2snc/moos-ivp-morgan/lib
+
+  ok_skew = any
+  start_in_drive = false
+  //hold_on_apps = pContactMgrV20
 }
 
 //------------------------------------------
@@ -129,8 +136,8 @@ ProcessConfig = pHelmIvP
 
 ProcessConfig = pMarineViewer
 {
-  AppTick    = 4
-  CommsTick  = 4
+  AppTick    = 100
+  CommsTick  = 100
 
   tiff_file            = morgan_city.tif
 	//tiff_file            = MIT_SP.tif
@@ -144,6 +151,7 @@ ProcessConfig = pMarineViewer
   hash_viewable        = false
 
   trails_point_size   = 1
+  center_view = active
 
 	//op_vertex = x=-83, y=-47,    lwidth=1,lcolor=yellow,looped=true,group=moa
   //op_vertex = x=-46.4, y=-129.2, lwidth=1,lcolor=yellow,looped=true,group=moa
