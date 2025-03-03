@@ -30,9 +30,9 @@ double speed_ki = 0.0; //ki da veloc
 double speed_kd = 0.0; //kd da veloc
 int thrust_map = 1;  // set to 1 to use thrust_map speed control
 
-double heading_kp = 0.0; //kp do heading
+double heading_kp = 0.9; //kp do heading - Modified value for USV
 double heading_ki = 0.0; //ki do heading
-double heading_kd = 0.0; //kd do heading
+double heading_kd = 0.2; //kd do heading
 
 double dt = 0.0;
 std::string deploy; //deploy
@@ -56,10 +56,11 @@ PIDController::PIDController(double kp, double ki, double kd)
   kp          = kp;
   ki          = ki;
   kd          = kd;
-  upper_bound = 0;
-  lower_bound = 0;
+  upper_bound = 40; //Modified value for USV
+  lower_bound = -40;
   integral    = 0;
   prevError   = 0;
+
 }
 
 //---------------------------------------------------------
@@ -437,7 +438,6 @@ bool lanchaPID::buildReport()
   actab4 << headingController.getIterm() << speedController.getIterm();
   m_msgs << actab4.getFormattedString();
   m_msgs << endl;
-
 
   return(true);
 }

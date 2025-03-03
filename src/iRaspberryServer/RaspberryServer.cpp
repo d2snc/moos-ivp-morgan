@@ -131,8 +131,10 @@ bool RaspberryServer::Iterate()
   // Do your thing here!
   //make the commands
   //rudder command
-  char buffer[10];
-  snprintf(buffer, sizeof(buffer), "ST%03d", static_cast<int>(desired_rudder));
+  char buffer[12];
+  int mapped_rudder = static_cast<int>((desired_rudder + 40) * 100 / 80);//Make the transform from -40,40 to 0,100 
+  //CHANGE HERE IF CHANGES THE UPPER OR LOWER LIMIT OF CONTROL !!
+  snprintf(buffer, sizeof(buffer), "ST%03d", mapped_rudder); 
   desired_rudder_command = buffer;
   
   //thrust command
