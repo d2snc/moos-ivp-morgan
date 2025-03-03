@@ -165,25 +165,19 @@ protected:
         heading_gps = rmcdata.m_dTrackAngle; // Marcação vinda do GPS - tirei esse e coloquei o heading vindo da giro
 
       }
-    } 
-
-    // Process GPHDT (Heading Data)
-    else if (strstr(pCmd, "GPHDT") != NULL) {
-      if (pData != NULL) {
-          std::string dataStr(pData);
-          size_t commaPos = dataStr.find(",T");
-          if (commaPos != std::string::npos) {
-              dataStr = dataStr.substr(0, commaPos);  // Remove ",T"
-          }
-          try {
-              double headingValue = std::stod(dataStr);  // Convert to double
-              heading_giro = headingValue;
-          }
-          catch (const std::exception &e) {
-              std::cerr << "Error parsing heading value: " << e.what() << std::endl;
-          }
-      }
     }
+    
+    if (pCmd == "GPHDT") {
+      std::string input = pData;
+      std::stringstream ss(input);
+      double number;
+      char comma;
+
+      ss >> number >> comma;
+      heading_giro = number;
+    }
+
+    
 
 		return CNMEAParserData::ERROR_OK;
 	}
