@@ -336,88 +336,98 @@ bool DivisorNMEA::Iterate() {
 
                           std::string msg_string = nmea_msg;
 
-                          // Parse depth message
-                          std::stringstream ss(msg_string);
-                          std::string token;
-                          std::getline(ss, token, ',');
-
-                          if (token == "$SDDPT") {
+                          if (!msg_string.empty()) {
+                              // Parse depth message
+                              std::stringstream ss(msg_string);
+                              std::string token;
                               std::getline(ss, token, ',');
-                              nav_depth = std::stof(token);
-                              Notify("NAV_DEPTH", nav_depth);
-                          }
 
-                          // Process NMEA sentence
-                          MyNMEAParser NMEAParser;
-                          try {
-                              NMEAParser.ProcessNMEABuffer((char *)msg_string.c_str(), msg_string.length());
-                          } catch (std::system_error& e) {
-                              std::cout << e.what();
-                          }
+                              if (token == "$SDDPT") {
+                                  std::getline(ss, token, ',');
+                                  nav_depth = std::stof(token);
+                                  Notify("NAV_DEPTH", nav_depth);
+                              }
 
-                          // Process AIS messages
-                          if (msg_string.substr(0, 6) == "!AIVDM") {
+                              // Process NMEA sentence
+                              MyNMEAParser NMEAParser;
                               try {
-                                  const std::string body(libais::GetBody(nmea_msg));
-                                  const int pad = libais::GetPad(nmea_msg);
+                                  NMEAParser.ProcessNMEABuffer((char *)msg_string.c_str(), msg_string.length());
+                              } catch (std::system_error& e) {
+                                  std::cout << e.what();
+                              }
 
-                                  if (pad >= 0) {
-                                      std::unique_ptr<libais::Ais1_2_3> msg(new libais::Ais1_2_3(body.c_str(), pad));
+                              // Process AIS messages
+                              if (msg_string.substr(0, 6) == "!AIVDM") {
+                                  try {
+                                      const std::string body(libais::GetBody(nmea_msg));
+                                      const int pad = libais::GetPad(nmea_msg);
 
-                                      if (msg->mmsi != 710400014) {
-                                          Notify("MESSAGE_ID", msg->message_id);
-                                          Notify("MESSAGE_MMSI", msg->mmsi);
-                                          Notify("MESSAGE_NAVSTATUS", msg->nav_status);
-                                          Notify("MESSAGE_SOG", msg->sog);
-                                          Notify("MESSAGE_LONGITUDE", msg->position.lng_deg);
-                                          Notify("MESSAGE_LATITUDE", msg->position.lat_deg);
-                                          Notify("MESSAGE_TRUEHEADING", msg->true_heading);
+                                      if (pad >= 0) {
+                                          std::unique_ptr<libais::Ais1_2_3> msg(new libais::Ais1_2_3(body.c_str(), pad));
+
+                                          if (msg && msg->mmsi != 710400014) {
+                                              Notify("MESSAGE_ID", msg->message_id);
+                                              Notify("MESSAGE_MMSI", msg->mmsi);
+                                              Notify("MESSAGE_NAVSTATUS", msg->nav_status);
+                                              Notify("MESSAGE_SOG", msg->sog);
+                                              Notify("MESSAGE_LONGITUDE", msg->position.lng_deg);
+                                              Notify("MESSAGE_LATITUDE", msg->position.lat_deg);
+                                              Notify("MESSAGE_TRUEHEADING", msg->true_heading);
+                                          }
                                       }
+                                  } catch (std::system_error& e) {
+                                      std::cout << e.what();
                                   }
-                              } catch (std::system_error& e) {
-                                  std::cout << e.what();
                               }
-                          }
 
-                          // Parse other NMEA messages
-                          else if (msg_string.substr(0, 6) == "$AGRSA") {
-                              try {
-                                  angulo_leme = std::stod(libais::GetNthField(nmea_msg, 1, ","));
-                              } catch (std::system_error& e) {
-                                  std::cout << e.what();
+                              // Parse other NMEA messages
+                              else if (msg_string.substr(0, 6) == "$AGRSA") {
+                                  try {
+                                      if (!msg_string.empty()) {
+                                          angulo_leme = std::stod(libais::GetNthField(nmea_msg, 1, ","));
+                                      }
+                                  } catch (std::system_error& e) {
+                                      std::cout << e.what();
+                                  }
+                                  Notify("ANGULO_LEME", angulo_leme);
+                                  Notify("NAV_YAW", angulo_leme);
                               }
-                              Notify("ANGULO_LEME", angulo_leme);
-                              Notify("NAV_YAW", angulo_leme);
-                          }
 
-                          else if (msg_string.substr(0, 6) == "$GPHDT") {
-                              try {
-                                  heading_giro = std::stod(libais::GetNthField(nmea_msg, 1, ","));
-                                  Notify("NAV_HEADING", heading_giro);
-                              } catch (std::system_error& e) {
-                                  std::cout << e.what();
+                              else if (msg_string.substr(0, 6) == "$GPHDT") {
+                                  try {
+                                      if (!msg_string.empty()) {
+                                          heading_giro = std::stod(libais::GetNthField(nmea_msg, 1, ","));
+                                          Notify("NAV_HEADING", heading_giro);
+                                      }
+                                  } catch (std::system_error& e) {
+                                      std::cout << e.what();
+                                  }
                               }
-                          }
 
-                          else if (msg_string.substr(0, 6) == "$GPRMC") {
-                              try {
-                                  speed_gps = std::stod(libais::GetNthField(nmea_msg, 7, ","));
-                              } catch (std::system_error& e) {
-                                  std::cout << e.what();
+                              else if (msg_string.substr(0, 6) == "$GPRMC") {
+                                  try {
+                                      if (!msg_string.empty()) {
+                                          speed_gps = std::stod(libais::GetNthField(nmea_msg, 7, ","));
+                                      }
+                                  } catch (std::system_error& e) {
+                                      std::cout << e.what();
+                                  }
+                                  Notify("NAV_SPEED", speed_gps);
                               }
-                              Notify("NAV_SPEED", speed_gps);
-                          }
 
-                          else if (msg_string.substr(0, 6) == "$WIMWV") {
-                              try {
-                                  wind_angle = std::stod(libais::GetNthField(nmea_msg, 1, ","));
-                                  Notify("WIND_ANGLE", wind_angle);
-                                  wind_speed = std::stold(libais::GetNthField(nmea_msg, 3, ","));
-                                  Notify("WIND_SPEED", wind_speed);
-                              } catch (std::system_error& e) {
-                                  std::cout << e.what();
-                              } catch (...) {
-                                  std::cout << "\nThere is an error with the $WIMWV message! \n";
+                              else if (msg_string.substr(0, 6) == "$WIMWV") {
+                                  try {
+                                      if (!msg_string.empty()) {
+                                          wind_angle = std::stod(libais::GetNthField(nmea_msg, 1, ","));
+                                          Notify("WIND_ANGLE", wind_angle);
+                                          wind_speed = std::stold(libais::GetNthField(nmea_msg, 3, ","));
+                                          Notify("WIND_SPEED", wind_speed);
+                                      }
+                                  } catch (std::system_error& e) {
+                                      std::cout << e.what();
+                                  } catch (...) {
+                                      std::cout << "\nThere is an error with the $WIMWV message! \n";
+                                  }
                               }
                           }
                       } else {
