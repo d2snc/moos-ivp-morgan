@@ -203,5 +203,7 @@ ProcessConfig = pNodeReporter
   platform_type   = ship
   platform_color  = red
   platform_length = 100
+
+  cross_fill_policy = global
 }
 
