@@ -144,7 +144,7 @@ protected:
 				//printf("GPGGA Parsed!\n");
 				//printf("   Time:                %02d:%02d:%02d\n", ggaData.m_nHour, ggaData.m_nMinute, ggaData.m_nSecond);
 				//lat_gps = ggaData.m_dLatitude;
-        //long_gps = ggaData.m_dLongitude;
+        //long_gps = ggaDa"55.70,T";ta.m_dLongitude;
         //printf("   Latitude:            %f\n", ggaData.m_dLatitude);
 				//printf("   Longitude:           %f\n", ggaData.m_dLongitude);
 				//printf("   Altitude:            %.01fM\n", ggaData.m_dAltitudeMSL);
@@ -167,14 +167,17 @@ protected:
       }
     } else if (strstr(pCmd, "GPHDT") != NULL) {
       
-      try {
-        heading_giro = stod(libais::GetNthField(pData,1,",")); //Pega o primeiro campo da string NMEA
-        //Notify("NAV_HEADING", heading_giro);      
-      }
-      catch (std::system_error& e)
-      {
-        std::cout << e.what();
-      }
+      std::string input = pData;
+      std::stringstream ss(input);
+      double number;
+      char comma;
+
+      ss >> number >> comma; // Read the number and discard ',T'
+
+      heading_giro = number;
+
+      printf("Heading Giro: %f\n", heading_giro);
+
     }
     
   
@@ -451,7 +454,7 @@ bool DivisorNMEA::Iterate()
   }
 
   //Parser do Rumo Verdadeiro dado pela Giro
-  else if (msg_string.substr(0,6) == "$GPHDT") {
+  /*else if (msg_string.substr(0,6) == "$GPHDT") {
     try {
       heading_giro = stod(libais::GetNthField(msg,1,",")); //Pega o primeiro campo da string NMEA
       Notify("NAV_HEADING", heading_giro);      
@@ -460,7 +463,7 @@ bool DivisorNMEA::Iterate()
     {
       std::cout << e.what();
     }
-  }
+  }*/
 
   // Parser da Velocidade dada pelo GPS
   else if (msg_string.substr(0,6) == "$GPRMC") {
