@@ -21,9 +21,9 @@ ProcessConfig = ANTLER
 
   Run = MOOSDB        @ NewConsole = false
   //Run = pLogger       @ NewConsole = false
-  Run = uSimMarineV22 @ NewConsole = false
+  //Run = uSimMarineV22 @ NewConsole = false
   Run = planchaPID @ NewConsole = false
-  //Run = iDivisorNMEA	@ NewConsole = false
+  Run = iDivisorNMEA	@ NewConsole = false
   Run = pHelmIvP      @ NewConsole = false
   Run = pMarineViewer	@ NewConsole = false
   Run = uProcessWatch	@ NewConsole = false

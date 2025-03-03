@@ -85,6 +85,7 @@ char* saida_pCmd;
 char* saida_pData;
 int msg_debug;
 int current_gear;
+int serial_fd;  // File descriptor for serial port
 
 //Variáveis globais para o receiver UDP
 int sd, rc, n;
@@ -176,13 +177,42 @@ protected:
 
 DivisorNMEA::DivisorNMEA()
 {
-  //Configs para receber dados da serial
-  //endereco_porta_serial = "/dev/pts/3"; // Porta para testes
-  //baudrate = 9600;
+  serial_fd = open("/dev/ttyUSB0", O_RDWR | O_NOCTTY); //Change serial port here
+  if (serial_fd == -1) {
+      perror("Error opening serial port");
+      exit(1);
+  }
 
-  //Valores iniciais
-  //lat_gps = 0;
-  //long_gps = 0;
+  // Configure the serial port
+  struct termios tty;
+  if (tcgetattr(serial_fd, &tty) != 0) {
+      perror("Error getting serial port attributes");
+      exit(1);
+  }
+
+  // Set baud rate to 115200
+  cfsetospeed(&tty, B115200);
+  cfsetispeed(&tty, B115200);
+
+  // Configure 8N1 mode
+  tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit characters
+  tty.c_cflag |= (CLOCAL | CREAD);  // Ignore modem controls, enable reading
+  tty.c_cflag &= ~(PARENB | PARODD); // No parity
+  tty.c_cflag &= ~CSTOPB;            // 1 stop bit
+  tty.c_cflag &= ~CRTSCTS;           // No hardware flow control
+
+  // Set raw input mode
+  tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+  tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+  tty.c_oflag &= ~OPOST;
+
+  // Apply settings
+  if (tcsetattr(serial_fd, TCSANOW, &tty) != 0) {
+      perror("Error setting serial port attributes");
+      exit(1);
+  }
+
+  printf("Serial port /dev/ttyUSB0 configured successfully\n");
 
 }
 
@@ -192,6 +222,10 @@ DivisorNMEA::DivisorNMEA()
 DivisorNMEA::~DivisorNMEA()
 {
     //close(serial_port);
+    if (serial_fd != -1) {
+      close(serial_fd);
+      printf("Serial port closed.\n");
+    }
 }
 
 //---------------------------------------------------------
@@ -250,26 +284,15 @@ bool DivisorNMEA::Iterate()
   /* receive message */
   cliLen = sizeof(cliAddr);
 
-  try {
-    n = recvfrom(sd, msg, MAX_MSG, 0, 
-      (struct sockaddr *) &cliAddr, &cliLen);
-  }
-  catch (std::system_error& e)
-  {
-    std::cout << e.what();
-  }
+  int n = read(serial_fd, msg, sizeof(msg) - 1);
 
-  if(n<0) {
-    printf(": cannot receive data \n");
-    //continue;
+  if (n < 0) {
+      perror("Error reading from serial port");
+  } else if (n > 0) {
+      msg[n] = '\0'; // Null-terminate received data
+      printf("Received from Serial: %s\n", msg);
+      Notify("MSG_SERIAL", msg);
   }
-    
-  /* print received message */
-  printf(": from %s:UDP%u : %s \n", 
-    inet_ntoa(cliAddr.sin_addr),
-    ntohs(cliAddr.sin_port),msg);
-
-  Notify("MSG_UDP",msg); //Declarar uma variável pro MOOSDB
 
   std::string msg_string = msg;
 
@@ -305,9 +328,9 @@ bool DivisorNMEA::Iterate()
   //Publico NAV_X e NAV_Y
   //TODO deixar parametrizavel pra localização
 
-  // Rio de Janeiro
-  double lat_origin = -22.93335; //ALTERAR AQUI SE MUDAR A CARTA NÁUTICA !!!
-  double lon_origin = -43.136666665;
+  // Morgan City
+  double lat_origin = 29.71970895316288; //ALTERAR AQUI SE MUDAR A CARTA NÁUTICA !!!
+  double lon_origin = -91.14705165281887;
 
   // Salvador
   //double lat_origin = -12.97933112028696;
@@ -586,6 +609,7 @@ void DivisorNMEA::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
   Register("LINHA_NMEA", 0);
+  Register("MSG_SERIAL", 0);
   //Register("NAV_YAW", 0);
  
 }
