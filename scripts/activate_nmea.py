@@ -1,29 +1,32 @@
 import serial
 
-def calculate_checksum(sentence):
-    """Calculate NMEA checksum."""
-    checksum = 0
-    for char in sentence:
-        checksum ^= ord(char)  # XOR each character
-    return f"{checksum:02X}"  # Return hex checksum
 
-def send_command(port, baudrate, command):
-    """Send a command to VN-300 over serial."""
-    with serial.Serial(port, baudrate, timeout=1) as ser:
-        # Calculate checksum
-        checksum = calculate_checksum(command)
-        full_command = f"${command}*{checksum}\r\n"
-        
-        print(f"Sending: {full_command}")
-        ser.write(full_command.encode('utf-8'))
-        
-        # Read response
-        response = ser.readline().decode('utf-8').strip()
-        print(f"Response: {response}")
+portname = '/dev/serial0'
+baudrate = 115200
+
+def main():
+	# open serial port
+	port = serial.Serial(portname, baudrate, timeout=1, write_timeout=1)
+	
+	# read 10 times
+	for i in range(10):
+		print(port.readline())
+	
+	# pause async outputs
+	print('$VNASY,0*XX\r\n'.encode())
+	port.write('$VNASY,0*XX\r\n'.encode())
+	
+	# read 5 times (should timeout each time)
+	for i in range(5):
+		print(port.readline())
+	
+	# resume async outputs
+	port.write('$VNASY,1*XX\r\n'.encode())
+	
+	# read 10 times
+	for i in range(10):
+		print(port.readline())
+	port.close()
 
 if __name__ == "__main__":
-    serial_port = "/dev/ttyUSB0"  # Change if necessary (e.g., COM3 for Windows)
-    baudrate = 115200  # Adjust according to VN-300 settings
-    command = "VNWRG,101,1,5,0,0,203"  # Command without '$' and '*XX'
-    
-    send_command(serial_port, baudrate, command)
+	main()
