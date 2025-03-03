@@ -165,9 +165,9 @@ protected:
         //heading_gps = rmcdata.m_dTrackAngle; // Marcação vinda do GPS - tirei esse e coloquei o heading vindo da giro
 
       }
-    } else if (pCmd == "GPHDT") {
+    } else if (strstr(pCmd, "GPHDT") != NULL) {
       
-      printf("Receiving Giro:");
+      printf("Receiving Giro");
 
     }
     
