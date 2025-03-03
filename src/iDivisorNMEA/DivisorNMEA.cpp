@@ -61,6 +61,7 @@
 
 #define LOCAL_SERVER_PORT 10111 //Settings do recebedor UDP
 #define MAX_MSG 1000 // Tamanho da mensagem UDP a ser recebida
+#define BUFFER_SIZE 128
 
 
 //Include do geodesy
@@ -269,276 +270,173 @@ bool DivisorNMEA::OnConnectToServer()
    return(true);
 }
 
+bool validate_nmea_checksum(const std::string& message) {
+  if (message.size() < 3) return false; // Minimum "$X*00"
+  
+  size_t star_pos = message.find('*');
+  if (star_pos == std::string::npos || star_pos + 2 >= message.size()) {
+      return false; // No checksum
+  }
+
+  unsigned char checksum = 0;
+  for (size_t i = 1; i < star_pos; i++) {
+      checksum ^= message[i];
+  }
+
+  unsigned int received_checksum;
+  std::stringstream ss;
+  ss << std::hex << message.substr(star_pos + 1, 2);
+  ss >> received_checksum;
+
+  return checksum == received_checksum;
+}
+
 //---------------------------------------------------------
 // Procedure: Iterate()
 //            happens AppTick times per second
 
-bool DivisorNMEA::Iterate()
-{
+bool DivisorNMEA::Iterate() {
   AppCastingMOOSApp::Iterate();
-  // Do your thing here!
-  // Crio o buffer para receber as sentenças NMEA
 
-  memset(msg,0x0,MAX_MSG);
+  static char buffer[BUFFER_SIZE];
+  static int index = 0;
+  static bool capturing = false;
 
-  /* receive message */
-  cliLen = sizeof(cliAddr);
+  while (true) {
+      char c;
+      int n = read(serial_fd, &c, 1);
 
-  int n = read(serial_fd, msg, sizeof(msg) - 1);
+      if (n > 0) {
+          if (!capturing) {
+              if (c == '$') { // Start capturing on '$'
+                  capturing = true;
+                  index = 0;
+                  buffer[index++] = c;
+              }
+          } else {
+              buffer[index++] = c;
 
-  if (n < 0) {
-      perror("Error reading from serial port");
-  } else if (n > 0) {
-      msg[n] = '\0'; // Null-terminate received data
-      printf("Received from Serial: %s\n", msg);
-      Notify("MSG_SERIAL", msg);
-  }
+              if (index >= BUFFER_SIZE - 1) { // Prevent buffer overflow
+                  capturing = false;
+                  index = 0;
+                  continue;
+              }
 
-  std::string msg_string = msg;
+              if (c == '*') {
+                  // Asterisk detected, next two chars must be checksum
+              } else if (index > 3 && buffer[index - 3] == '*') {
+                  // End of message (*XX), validate
+                  buffer[index] = '\0';
 
-    //Parser de msg caso seja profundidade
-  // Create a string stream to split the input string by commas
-  std::stringstream ss(msg_string);
-  std::string token;
+                  if (isxdigit(buffer[index - 2]) && isxdigit(buffer[index - 1])) {
+                      std::string nmea_msg(buffer);
+                      if (validate_nmea_checksum(nmea_msg)) {
+                          printf("Valid NMEA: %s\n", nmea_msg.c_str());
+                          Notify("MSG_SERIAL", nmea_msg);
 
-  // Read the first token (should be "$SDDPT")
-  std::getline(ss, token, ',');
+                          std::string msg_string = nmea_msg;
 
-  if (token == "$SDDPT") {
-      // Read the second token and convert it to a floating-point number
-      std::getline(ss, token, ',');
-      nav_depth = std::stof(token);
+                          // Parse depth message
+                          std::stringstream ss(msg_string);
+                          std::string token;
+                          std::getline(ss, token, ',');
 
-      // Print the extracted nav_depth
-      Notify("NAV_DEPTH", nav_depth);
-  }
+                          if (token == "$SDDPT") {
+                              std::getline(ss, token, ',');
+                              nav_depth = std::stof(token);
+                              Notify("NAV_DEPTH", nav_depth);
+                          }
 
-  // Crio um objeto para parse da msg NMEA
-  MyNMEAParser NMEAParser;
+                          // Process NMEA sentence
+                          MyNMEAParser NMEAParser;
+                          try {
+                              NMEAParser.ProcessNMEABuffer((char *)msg_string.c_str(), msg_string.length());
+                          } catch (std::system_error& e) {
+                              std::cout << e.what();
+                          }
 
-  //Processo a sentença
-  try {
-    NMEAParser.ProcessNMEABuffer((char *)msg, (int)strlen(msg));
-  }
-  catch (std::system_error& e)
-  {
-    std::cout << e.what();
-  }
+                          // Process AIS messages
+                          if (msg_string.substr(0, 6) == "!AIVDM") {
+                              try {
+                                  const std::string body(libais::GetBody(nmea_msg));
+                                  const int pad = libais::GetPad(nmea_msg);
 
-  //Publico NAV_X e NAV_Y
-  //TODO deixar parametrizavel pra localização
+                                  if (pad >= 0) {
+                                      std::unique_ptr<libais::Ais1_2_3> msg(new libais::Ais1_2_3(body.c_str(), pad));
 
-  // Morgan City
-  double lat_origin = 29.71970895316288; //ALTERAR AQUI SE MUDAR A CARTA NÁUTICA !!!
-  double lon_origin = -91.14705165281887;
+                                      if (msg->mmsi != 710400014) {
+                                          Notify("MESSAGE_ID", msg->message_id);
+                                          Notify("MESSAGE_MMSI", msg->mmsi);
+                                          Notify("MESSAGE_NAVSTATUS", msg->nav_status);
+                                          Notify("MESSAGE_SOG", msg->sog);
+                                          Notify("MESSAGE_LONGITUDE", msg->position.lng_deg);
+                                          Notify("MESSAGE_LATITUDE", msg->position.lat_deg);
+                                          Notify("MESSAGE_TRUEHEADING", msg->true_heading);
+                                      }
+                                  }
+                              } catch (std::system_error& e) {
+                                  std::cout << e.what();
+                              }
+                          }
 
-  // Salvador
-  //double lat_origin = -12.97933112028696;
-  //double lon_origin = -38.5666610393065;
-  double nav_x = 0.0;
-  double nav_y = 0.0;
-  m_geodesy.Initialise(lat_origin, lon_origin);
-  //m_geodesy.SetRefEllipsoid(23); // Set the ellipsoid to WGS-84
-  m_geodesy.LatLong2LocalGrid(lat_gps, long_gps, nav_y, nav_x);
+                          // Parse other NMEA messages
+                          else if (msg_string.substr(0, 6) == "$AGRSA") {
+                              try {
+                                  angulo_leme = std::stod(libais::GetNthField(nmea_msg, 1, ","));
+                              } catch (std::system_error& e) {
+                                  std::cout << e.what();
+                              }
+                              Notify("ANGULO_LEME", angulo_leme);
+                              Notify("NAV_YAW", angulo_leme);
+                          }
 
-  string x = to_string(nav_x);
-  string y = to_string(nav_y);
+                          else if (msg_string.substr(0, 6) == "$GPHDT") {
+                              try {
+                                  heading_giro = std::stod(libais::GetNthField(nmea_msg, 1, ","));
+                                  Notify("NAV_HEADING", heading_giro);
+                              } catch (std::system_error& e) {
+                                  std::cout << e.what();
+                              }
+                          }
 
-  Notify("NAV_X",x);
-  Notify("NAV_Y",y);
+                          else if (msg_string.substr(0, 6) == "$GPRMC") {
+                              try {
+                                  speed_gps = std::stod(libais::GetNthField(nmea_msg, 7, ","));
+                              } catch (std::system_error& e) {
+                                  std::cout << e.what();
+                              }
+                              Notify("NAV_SPEED", speed_gps);
+                          }
 
-  //Atualizo variáveis necessárias para o movimento do navio
-  Notify("NAV_LAT", lat_gps);
-  Notify("NAV_LONG", long_gps);
-  Notify("NAV_SPEED", speed_gps);
-  
-  //para testes
-  Notify("GPS_HEADING", heading_gps);
-  /*
-  if (heading_giro == 0){ //Caso o rumo verdadeiro da giro venha zerada, pego do gps
-    Notify("NAV_HEADING", heading_gps); //Alterei para pegar o heading da giro ao invés do gps
-  } else {
-    Notify("NAV_HEADING", heading_giro);
-  }*/
+                          else if (msg_string.substr(0, 6) == "$WIMWV") {
+                              try {
+                                  wind_angle = std::stod(libais::GetNthField(nmea_msg, 1, ","));
+                                  Notify("WIND_ANGLE", wind_angle);
+                                  wind_speed = std::stold(libais::GetNthField(nmea_msg, 3, ","));
+                                  Notify("WIND_SPEED", wind_speed);
+                              } catch (std::system_error& e) {
+                                  std::cout << e.what();
+                              } catch (...) {
+                                  std::cout << "\nThere is an error with the $WIMWV message! \n";
+                              }
+                          }
+                      } else {
+                          printf("Invalid checksum: %s\n", nmea_msg.c_str());
+                      }
+                  } else {
+                      printf("Malformed message: %s\n", buffer);
+                  }
 
-  NMEAParser.ResetData(); //Reseto dados NMEA
-  
-  //Iteração pelas mensagens e salvo a que contém dados AIS
-  
-    //msg_debug = msg.substr(0,6);
-    //Verifica o inicio da string para fazer o parsing da msg ais
-    //PARSING DA MSG AIS
-    
-  if (msg_string.substr(0,6) == "!AIVDM"){
-    try {
-      
-      const std::string body(libais::GetBody(msg));
-      
-      const int pad = libais::GetPad(msg);
-      //std::string chksum_block = libais::GetNthField(msg, 6, ",");
-      //Removendo espacos em branco da string
-      //remove(chksum_block.begin(), chksum_block.end(), ' ');
-      
-      msg_debug = pad;
-      
-      //std::string chksum_block(libais::GetNthField(msg, 6, ","));
-      if (pad >= 0){
-        
-        std::unique_ptr<libais::Ais1_2_3> msg(new libais::Ais1_2_3(body.c_str(), pad));
-        
-        //Caso o código MMSI do contato seja diferente do da lancha, adicionar no quadro de contatos
-        // MMSI da lancha : 710400014
-
-        //if (msg->mmsi != 710400014 && msg->mmsi != 0) { //Colocar aqui o MMSI da lancha
-        
-        if (msg->mmsi != 710400014) {
-          Notify("MESSAGE_ID", msg->message_id);
-          Notify("MESSAGE_MMSI", msg->mmsi);
-          Notify("MESSAGE_NAVSTATUS", msg->nav_status);
-          Notify("MESSAGE_SOG", msg->sog);
-          Notify("MESSAGE_LONGITUDE", msg->position.lng_deg);
-          Notify("MESSAGE_LATITUDE", msg->position.lat_deg);
-          Notify("MESSAGE_TRUEHEADING", msg->true_heading);
-
-          string msg_lat = to_string(msg->position.lat_deg); //Latitude do ctt
-          string msg_lon = to_string(msg->position.lng_deg); //Longitude do ctt
-          string msg_spd = to_string(msg->sog); //Veloc do ctt
-          string msg_cog = to_string(msg->cog); //Rumo no chão
-          string msg_mmsi = to_string(msg->mmsi); //Codigo MMSI
-          //msg_debug = msg_mmsi;
-          double time = MOOSTime(); //Tempo no MOOS
-          string time_string = to_string(time); //Passo o tempo para string
-
-          //Colocar a Latitude e Longitude de Origem
-          //!!!!!!! ALTERAR ESSES DADOS SE MUDAR A CARTA NÁUTICA !!!!!!!!!!!!
-
-          // Rio de Janeiro
-          double lat_origin = -22.93335; //ALTERAR AQUI SE MUDAR A CARTA NÁUTICA !!!
-          double lon_origin = -43.136666665;
-
-          // Salvador
-          //double lat_origin = -12.97933112028696;
-          //double lon_origin = -38.5666610393065;
-          double nav_x = 0;
-          double nav_y = 0;
-
-          //Faz a conversão da Lat/Long para coordenadas locais
-
-          //m_geodesy.Initialise(lat_origin, lon_origin);
-          //m_geodesy.LatLong2LocalGrid(msg->position.lat_deg, msg->position.lng_deg, nav_y, nav_x);
-
-          //string x = to_string(nav_x);
-          //string y = to_string(nav_y);
-          
-          //Coloquei essa lógica para não confundir contato AIS com o navio principal no início da execução
-          /*
-          if (contador_ais > 10) {
-            Notify("NODE_REPORT","NAME=contato_"+msg_mmsi+",TYPE=SHIP,TIME="+time_string+",LAT="+msg_lat+",LON="+msg_lon+",SPD="+msg_spd+",HDG="+msg_cog+",LENGTH=3.8,MODE=DRIVE,X="+x+",Y="+y);
+                  capturing = false;
+                  index = 0;
+              }
           }
-          contador_ais +=1;
-          */
-        }
+      } else if (n < 0) {
+          perror("Error reading from serial port");
+          return false;
       }
-    }
-    catch (std::system_error& e) {
-      std::cout << e.what();
-    }
-
-  } //fechamento do if 
-  //Parser do ângulo do leme
-  else if (msg_string.substr(0,6) == "$AGRSA") {
-    try {
-      angulo_leme = stod(libais::GetNthField(msg,1,",")); //Pega o segundo campo da string NMEA
-    }
-    catch (std::system_error& e)
-    {
-      std::cout << e.what();
-    }
-    double ang = angulo_leme;
-    Notify("ANGULO_LEME", ang);
-    Notify("NAV_YAW", ang); //Variável de retorno do valor do ângulo do leme para o PID
   }
-
-  //Parser do Rumo Verdadeiro dado pela Giro
-  else if (msg_string.substr(0,6) == "$GPHDT") {
-    try {
-      heading_giro = stod(libais::GetNthField(msg,1,",")); //Pega o primeiro campo da string NMEA
-      Notify("NAV_HEADING", heading_giro);      
-    }
-    catch (std::system_error& e)
-    {
-      std::cout << e.what();
-    }
-  }
-
-  // Parser da Velocidade dada pelo GPS
-  else if (msg_string.substr(0,6) == "$GPRMC") {
-    try {
-      speed_gps = stod(libais::GetNthField(msg,7,",")); // Pega oitavo campo da string NMEA (veloc em nós)
-    }
-    catch(std::system_error& e) {
-      std::cout << e.what();
-    }
-    Notify("NAV_SPEED", speed_gps);
-  }
-
-  //Parser da leitura do Anemômetro
-  else if (msg_string.substr(0,6) == "$WIMWV") {
-    try {
-      wind_angle = stod(libais::GetNthField(msg,1,",")); //Pega o primeiro campo da string NMEA
-      Notify("WIND_ANGLE", wind_angle);
-      wind_speed = stold(libais::GetNthField(msg,3,",")); //Pega o terceiro campo da string NMEA
-      Notify("WIND_SPEED", wind_speed);
-    }
-    catch (std::system_error& e) {
-      std::cout << e.what();
-    }
-    catch (...) {
-      std::cout << "\nThere is an error with the $WIMWV message! \n";
-    }
-  }
-
-  # if 0
-    else if (msg_string.substr(0,13) == "$MXPGN,01F205") {
-      try {
-        size_t lastCommaPos = msg_string.rfind(",");
-        size_t asteriskPos = msg_string.find("*");
-
-        if (lastCommaPos != std::string::npos && asteriskPos != std::string::npos && lastCommaPos < asteriskPos) {
-            // Extract the substring between the last comma and the asterisk
-
-            std::string hexSubstring = msg_string.substr(lastCommaPos + 1, asteriskPos - lastCommaPos - 1);
-
-            // Convert the hexadecimal substring to binary
-            std::stringstream ss;
-            ss << std::hex << hexSubstring;
-            unsigned long int intValue;
-            ss >> intValue;
-
-            // Convert to binary string
-            std::bitset<64> binaryValue(intValue); 
-            std::string binaryString = binaryValue.to_string();
-            // Get the 9th and 10th bits
-            char ninthBit = binaryString[8]; // 0-based indexing
-            char tenthBit = binaryString[9];
-
-            // Convert the bits to an integer value
-            current_gear = (ninthBit - '0') * 2 + (tenthBit - '0');  
-            Notify("CURRENT_GEAR", current_gear);    
-        } //endif
-      } //try
-      catch (std::system_error& e) {
-        std::cout << e.what();
-      } //catch
-    } //else if MXPGN
-  #endif
-  
-
-  //Reseto os dados
-  //NMEAParser.ResetData();
-
-  AppCastingMOOSApp::PostReport();
-  return(true);
+  return true;
 }
 
 //---------------------------------------------------------
