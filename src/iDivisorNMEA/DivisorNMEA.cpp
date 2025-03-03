@@ -165,18 +165,9 @@ protected:
         //heading_gps = rmcdata.m_dTrackAngle; // Marcação vinda do GPS - tirei esse e coloquei o heading vindo da giro
 
       }
-    } else if (strstr(pCmd, "GPHDT") != NULL) {
+    } else if (pCmd == "GPHDT") {
       
-      std::string input = pData;
-      std::stringstream ss(input);
-      double number;
-      char comma;
-
-      ss >> number >> comma; // Read the number and discard ',T'
-
-      heading_giro = number;
-
-      printf("Heading Giro: %f\n", heading_giro);
+      printf("Receiving Giro:");
 
     }
     
