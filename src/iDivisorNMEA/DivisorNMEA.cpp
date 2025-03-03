@@ -167,7 +167,14 @@ protected:
       }
     } else if (strstr(pCmd, "GPHDT") != NULL) {
       
-      printf("Receiving Giro");
+      std::string input = pData;
+      std::stringstream ss(input);
+      double number;
+      char comma;
+
+      ss >> number >> comma; // Read the number and discard ',T'
+
+      heading_giro = number;
 
     }
     
