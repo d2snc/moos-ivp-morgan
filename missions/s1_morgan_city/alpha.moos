@@ -29,7 +29,18 @@ ProcessConfig = ANTLER
   Run = uProcessWatch	@ NewConsole = false
   Run = pNodeReporter	@ NewConsole = false
   Run = pRealm	      @ NewConsole = false
+  Run = iRaspberryServer	      @ NewConsole = false
 }
+
+//------------------------------------------------
+// iRaspberryServer config block
+
+ProcessConfig = iRaspberryServer
+{
+   AppTick   = 20
+   CommsTick = 20
+}
+//------------------------------------------------
 
 //------------------------------------------------
 // iDivisorNMEA config block

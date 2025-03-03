@@ -166,7 +166,7 @@ protected:
 
       }
     } else if (strstr(pCmd, "GPHDT") != NULL) {
-      
+      //Take the value from $GPHDT string and put into heading_giro
       std::string input = pData;
       std::stringstream ss(input);
       double number;
