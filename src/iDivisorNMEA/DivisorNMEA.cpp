@@ -162,21 +162,22 @@ protected:
         lat_gps = rmcdata.m_dLatitude; // Latitude recebida
         long_gps = rmcdata.m_dLongitude; // Longitude recebida 
         //speed_gps = rmcdata.m_dSpeedKnots; // SOG do GPS
-        heading_gps = rmcdata.m_dTrackAngle; // Marcação vinda do GPS - tirei esse e coloquei o heading vindo da giro
+        //heading_gps = rmcdata.m_dTrackAngle; // Marcação vinda do GPS - tirei esse e coloquei o heading vindo da giro
 
+      }
+    } else if (strstr(pCmd, "GPHDT") != NULL) {
+      
+      try {
+        heading_giro = stod(libais::GetNthField(pData,1,",")); //Pega o primeiro campo da string NMEA
+        //Notify("NAV_HEADING", heading_giro);      
+      }
+      catch (std::system_error& e)
+      {
+        std::cout << e.what();
       }
     }
     
-    if (pCmd == "GPHDT") {
-      std::string input = pData;
-      std::stringstream ss(input);
-      double number;
-      char comma;
-
-      ss >> number >> comma;
-      heading_giro = number;
-    }
-
+  
     
 
 		return CNMEAParserData::ERROR_OK;
