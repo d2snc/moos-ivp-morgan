@@ -167,6 +167,24 @@ protected:
       }
     } 
 
+    // Process GPHDT (Heading Data)
+    else if (strstr(pCmd, "GPHDT") != NULL) {
+      if (pData != NULL) {
+          std::string dataStr(pData);
+          size_t commaPos = dataStr.find(",T");
+          if (commaPos != std::string::npos) {
+              dataStr = dataStr.substr(0, commaPos);  // Remove ",T"
+          }
+          try {
+              double headingValue = std::stod(dataStr);  // Convert to double
+              heading_giro = headingValue;
+          }
+          catch (const std::exception &e) {
+              std::cerr << "Error parsing heading value: " << e.what() << std::endl;
+          }
+      }
+    }
+
 		return CNMEAParserData::ERROR_OK;
 	}
 };
@@ -328,6 +346,7 @@ bool DivisorNMEA::Iterate()
   Notify("NAV_LAT", lat_gps);
   Notify("NAV_LONG", long_gps);
   Notify("NAV_SPEED", speed_gps);
+  Notify("NAV_HEADING", heading_giro);  // Notify NAV_HEADING
   
   //para testes
   Notify("GPS_HEADING", heading_gps);
