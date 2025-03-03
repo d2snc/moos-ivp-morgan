@@ -321,8 +321,8 @@ bool DivisorNMEA::Iterate()
   string x = to_string(nav_x);
   string y = to_string(nav_y);
 
-  //Notify("NAV_X",x);
-  //Notify("NAV_Y",y);
+  Notify("NAV_X",x);
+  Notify("NAV_Y",y);
 
   //Atualizo variáveis necessárias para o movimento do navio
   Notify("NAV_LAT", lat_gps);
