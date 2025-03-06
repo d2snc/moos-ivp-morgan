@@ -91,4 +91,47 @@ After the steering
 Comando que funcionou para o leme:
 cansend canb0 18F30A1A#0000FFFFFFFFFFFF
 
- 
+
+
+
+
+Bucket:
+
+Outboard Engines:
+cansend can1 0CFF05D0#7EFFFFFFFFFFFFFF -> Bucket Foward
+cansend can1 0CFF05D0#7DFFFFFFFFFFFFFF -> Bucket Neutral
+cansend can1 0CFF05D0#7CFFFFFFFFFFFFFF -> Bucket Reverse
+
+Inboard Engines:
+cansend can1 0CFF05D1#7EFFFFFFFFFFFFFF -> Bucket Foward
+cansend can1 0CFF05D1#7DFFFFFFFFFFFFFF -> Bucket Neutral
+cansend can1 0CFF05D1#7CFFFFFFFFFFFFFF -> Bucket Reverse
+
+
+Steering:
+
+cansend canb0 18F30A1A#0000FFFFFFFFFFFF -> Steering at 0
+cansend canb0 18F30A1A#3232FFFFFFFFFFFF -> Steering at 50%
+cansend canb0 18F30A1A#6464FFFFFFFFFFFF -> Steering at 100%
+
+
+Throttle:
+
+Outboard Engines:
+cansend can1 18F003D0#FF00FFFFFFFFFFFF -> 0% throttle
+cansend can1 18F003D0#FF7DFFFFFFFFFFFF -> 50% throttle
+cansend can1 18F003D0#FFFAFFFFFFFFFFFF -> 100% throttle
+
+Inboard Engines:
+cansend can1 18F003D1#FF00FFFFFFFFFFFF -> 0% throttle
+cansend can1 18F003D1#FF7DFFFFFFFFFFFF -> 50% throttle
+cansend can1 18F003D1#FFFAFFFFFFFFFFFF -> 100% throttle
+
+
+Bucket:
+cansend can1 0CFF05D0#01000000007D01FF -> bucket moved a little bit
+
+
+cansend can1 0CFF05D0#01000000007D03FF 
+
+

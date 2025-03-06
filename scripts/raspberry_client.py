@@ -2,7 +2,7 @@ import socket
 import threading
 
 # Server details
-SERVER_IP = "0.0.0.0"  # Change to the actual server IP if needed
+SERVER_IP = "100.104.250.8"  # Change to the actual server IP if needed
 SERVER_PORT = 5000
 
 def receive_messages(client_socket):
