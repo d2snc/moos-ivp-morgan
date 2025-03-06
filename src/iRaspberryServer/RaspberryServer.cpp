@@ -138,7 +138,7 @@ bool RaspberryServer::Iterate()
   desired_rudder_command = buffer;
   
   //thrust command
-  if (desired_gear == "A" || desired_gear == "N") {
+  if (desired_gear == "A" || desired_gear == "N" || desired_gear == "R") {
     char buffer[10];
     snprintf(buffer, sizeof(buffer), "P%s%03d", desired_gear.c_str(), static_cast<int>(desired_thrust));
     desired_thrust_command = buffer;
