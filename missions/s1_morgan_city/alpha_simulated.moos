@@ -31,6 +31,17 @@ ProcessConfig = ANTLER
   Run = pRealm	      @ NewConsole = false
   //Run = iRaspberryServer	      @ NewConsole = false
   Run = iNMEA	      @ NewConsole = false
+  Run = iSignalK	      @ NewConsole = false
+}
+
+
+//------------------------------------------------
+// iSignalK config block
+
+ProcessConfig = iSignalK
+{
+   AppTick   = 4
+   CommsTick = 4
 }
 
 //------------------------------------------------

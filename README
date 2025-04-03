@@ -1,3 +1,9 @@
+# To install
+sudo apt install libjsoncpp-dev
+
+
+
+
 ##############################################################################
 # FILE:        moos-ivp-extend/README
 # DATE:        2014/01/02
