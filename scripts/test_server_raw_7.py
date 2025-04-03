@@ -56,7 +56,7 @@ def send_neutral_once():
     Immediately send the PN command to drop speed to zero:
       18F003D0#FF00FFFFFFFFFFFF
     """
-    run_command("cansend can1 18F003D0#FF00FFFFFFFFFFFF")
+    run_command("cansend canb0 18F003D0#FF00FFFFFFFFFFFF")
 
 # --------------------------
 # Steering-scale helpers
@@ -108,24 +108,24 @@ def can_sender_loop():
             # ---------------------------------------------
             if gear == "forward":
                 # Forward gear command
-                run_command("cansend can1 0CFF05D0#7EFFFFFFFFFFFFFF")
+                run_command("cansend canb0 0CFF05D0#7EFFFFFFFFFFFFFF")
 
                 # Check if 1 second has elapsed since gear_start_time
                 if (time.time() - gear_start_time) >= 1.0:
                     # Now send the throttle
                     throttle_hex = scale_throttle_0_100_to_hex(throttle_value)
-                    cmd = f"cansend can1 18F003D0#FF{throttle_hex}FFFFFFFFFFFF"
+                    cmd = f"cansend canb0 18F003D0#FF{throttle_hex}FFFFFFFFFFFF"
                     run_command(cmd)
 
             elif gear == "reverse":
                 # Reverse gear command
-                run_command("cansend can1 0CFF05D0#01000000005050FF")
+                run_command("cansend canb0 0CFF05D0#01000000005050FF")
 
                 # Check if 1 second has elapsed since gear_start_time
                 if (time.time() - gear_start_time) >= 1.0:
                     # Now send the throttle
                     throttle_hex = scale_throttle_0_100_to_hex(throttle_value)
-                    cmd = f"cansend can1 18F003D0#FF{throttle_hex}FFFFFFFFFFFF"
+                    cmd = f"cansend canb0 18F003D0#FF{throttle_hex}FFFFFFFFFFFF"
                     run_command(cmd)
 
 
@@ -160,16 +160,16 @@ def handle_command(data):
 
             if steering_value == 0:
                 # "full left"
-                cmd = "cansend can1 18F30A1A#0000FFFFFFFFFFFF"
+                cmd = "cansend canb0 18F30A1A#0000FFFFFFFFFFFF"
             elif steering_value > 50:
                 # Right side => scale using scale_to_hex
                 scaled_hex = f"{scale_to_hex(steering_value)[2:].upper():0>2}"
-                cmd = f"cansend can1 18F30A1A#{scaled_hex}00FFFFFFFFFFFF"
+                cmd = f"cansend canb0 18F30A1A#{scaled_hex}00FFFFFFFFFFFF"
             else:
                 # Left side => scale using scale_value
                 scaled_int = scale_value(steering_value)  # returns decimal 0..100
                 scaled_hex = f"{hex(scaled_int)[2:].upper():0>2}"
-                cmd = f"cansend can1 18F30A1A#{scaled_hex}00FFFFFFFFFFFF"
+                cmd = f"cansend canb0 18F30A1A#{scaled_hex}00FFFFFFFFFFFF"
 
             run_command(cmd)
 
