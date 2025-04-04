@@ -38,6 +38,8 @@ The directory structure for the moos-ivp-extend is described below:
 Run:
 ```bash
    sudo apt install libboost-all-dev
+   sudo apt-get install libcurl4-openssl-dev
+   sudo apt-get install libjsoncpp-dev
 ```
 
 ## Linux and Mac Users
