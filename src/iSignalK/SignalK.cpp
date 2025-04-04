@@ -173,6 +173,7 @@ bool SignalK::Iterate()
       }
       else {
         // nextPoint == null -> não faz nada
+        Notify("RETURN", "true");
       }
     }
   }
